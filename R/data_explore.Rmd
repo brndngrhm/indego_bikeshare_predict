@@ -1,39 +1,203 @@
 ---
-title: "Untitled"
-output: html_document
-editor_options: 
-  chunk_output_type: console
+title: "Indego Bikeshare Data Exploration"
+output:
+ html_document:
+    code_folding: show
+    theme: flatly
+    highlight: breezedark
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
 ---
 
-```{r setup, include=FALSE}
-library(tidymodels)
+```{r set_dir, include=FALSE}
+knitr::opts_knit$set(root.dir = "../data")
+```
+
+```{r setup, include = FALSE}
 library(tidyverse)
 library(lubridate)
+library(skimr)
 library(janitor)
 library(highcharter)
 library(plotly) #https://plotly-r.com/
+library(heatmaply)
+library(here)
 
-source("R/helper.R")
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning= FALSE, ig.height = 8, fig.width = 10)
+```
 
-trips <- get_trips_data()
+### Initial Look at the Data
 
+```{r}
+
+trips <- read_csv("daily_trips_and_weather.csv") %>%
+  rename(trips = n) %>%
+  mutate(month = month(date, label = T, abbr = T),
+         day_nm = wday(date, label = T, abbr = T)) %>%
+  clean_names() 
+
+skimr::skim(trips)
+
+```
+
+The bike share data comes from [Indego](https://www.rideindego.com/about/data/) and according to the documentation its already somewhat cleaned
+
+ > * Staff servicing and test trips are removed.
+   * Trips below 1 minute are removed. 
+   * A “Virtual Station” listed in the checkout and return kiosks, is used by staff to check in or check out a bike remotely for a special event or in a situation
+   in which a bike could not otherwise be checked in or out to a station.
+   * Trip lengths are capped at 24 hours.
+   * Some short round trips or long trips may be the result of system or user error, but have been kept in the dataset for completeness.
+
+The weather data comes from *DarkSky*, and was obtained using the `darksky` [package.](https://github.com/hrbrmstr/darksky)
+
+Missing data in the weather data set is an issue - `ozone` is 100% missing and `precip_accumulation` is almost entirely missing. Lets remove them as well as any timestamps since they probably won't be useful in the model.
+
+```{r}
+trips <- trips %>%
+  select(-ends_with("time"), -c(row_num, ozone, precip_accumulation))
+
+skimr::skim(trips)
+```
+
+`precip_type` seems to be `NA` when there is no precipitation, so we can recode that to `none`. The handfull of remaining missing values we can omit from the data
+
+```{r}
+trips <- trips %>%
+  mutate(precip_type = ifelse(is.na(precip_type), "none", precip_type)) %>%
+  na.omit() 
+
+skimr::skim(trips)
+```
+
+
+### Fomatting Helper Function
+We can put this all together and turn into a `get_trips_data` function. This ensures the data is consistent each time we load it, and can serve as a formatting template for the new weather data we will use in the model when we predict.
+
+This function will live in a `helper.R` file to be used throughout the analysis.
+
+```{r}
+
+get_trips_data <- function(data){
+  
+  trips <- data %>%
+  rename(trips = n) %>%
+  mutate(month = month(date, label = T, abbr = T),
+         day_nm = wday(date, label = T, abbr = T)) %>%
+  clean_names() %>%
+  select(-ends_with(c("time", "min", "low")), starts_with("temperature"), -c(row_num, ozone, precip_accumulation, wind_bearing, wind_gust, moon_phase)) %>%
+  mutate(precip_type = ifelse(is.na(precip_type), "none", precip_type)) %>%
+  na.omit()
+
+  return(trips)
+  
+}
+
+```
+
+### Data Exploration {.tabset .tabset-fade .tabset-pills}
+
+#### Target
+Plotting the daily number of trips over time shows seasonality as well as 1 potential outlier - this could be a data issue.
+
+```{r}
+
+ggplot(trips, aes(x = trips)) + geom_histogram()
+
+ggplot(trips, aes(x = date, y = trips, color = month, group = 1)) + 
+  geom_line()
+
+```
+
+It turns out this is when the pope was in Philadelphia, so it is a legitimate data point and we can leave it in!
+
+[pope visits philly](https://www.phillyvoice.com/philadelphias-papal-Sunday/?page=7)
+
+```{r}
+trips %>%
+  filter(trips == max(trips)) %>%
+  pull(date)
+```
+
+#### Categorical Predictors
+```{r}
+categorical_predictors <- trips %>% 
+  select_if(., .predicate = is.character) %>%
+  names() 
+
+categorical_predictors <- c("trips", categorical_predictors, "day_nm", "month")
+
+get_boxplot <- function(predictor){
+  
+  df <- trips[names(trips) %in% categorical_predictors]
+  
+  df <- df %>% 
+    pivot_longer(cols = 2:ncol(.)) %>%
+    filter(name == {{predictor}}) 
+  
+  title <- df$name
+  
+  df %>% 
+    ggplot(., aes(x = forcats::fct_reorder(factor(value), trips, .fun = median), y = trips)) +
+    geom_boxplot() +
+    coord_flip() + 
+    labs(x = title, y = "trips", title =  paste('Trips by', title))
+}
+
+# check relationship of categorical vars with target
+map(categorical_predictors, get_boxplot)
+```
+
+#### Numeric Predictors
+
+Based on these scatter plots, it makes sense to remove `moon_phase`,  `wind_bearing` and `wind_gust`. Below the scatterplots is a correlation matrix of predictors. I am also going to remove the `*_min` and `*_low` variables as well since they are highly correlated with their `*_max` and `*_high` counterparts.
+
+Both of these changes are implemented in the `get_trips_data()` function above.
+
+```{r}
+# check relationship of numeric vars with target
+
+numeric_predictors <- trips %>% 
+  select_if(., .predicate = is.numeric) %>%
+  names() 
+
+numeric_predictors <- c("trips", numeric_predictors)
+
+get_scatterplot <- function(predictor){
+  
+  df <- trips[names(trips) %in% numeric_predictors]
+  
+  df <- df %>% 
+    pivot_longer(cols = 2:ncol(.)) %>%
+    filter(name == {{predictor}}) 
+  
+  title <- df$name
+  
+  df %>%
+    ggplot(., aes(x = value, y = trips)) + 
+    geom_point() + 
+    geom_smooth() + 
+    labs(x = title, y = "trips", title =  paste('Trips vs', title))
+}
+
+map(numeric_predictors, get_scatterplot)
 ```
 
 
 ```{r}
+cor_mat <- trips %>% 
+  select_if(., is.numeric) %>%
+  select(-trips) %>%
+  cor()
 
-trips %>% 
-  mutate(month= floor_date(date, "month")) %>%
-  group_by(month) %>%
-  tally() %>%
-  padr::pad(interval = 'month') %>%
-  padr::fill_by_value(n, 0) %>%
-  mutate(day_in_month = days_in_month(month),
-         quarter = paste(year(month), quarter(month))) %>%
-  View()
-  ggplot(., aes(month, n)) + geom_bar(stat = "identity") + 
-  scale_x_date(date_breaks = "1 month") + 
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+heatmaply_cor(cor_mat, 
+              symm = TRUE, 
+              cexRow = .0001, 
+              cexCol = .0001, 
+              branches_lwd = .1
+) 
 
 ```
 
