@@ -1,7 +1,7 @@
 ---
 title: "Indego Bikeshare Data Exploration"
 output:
- html_document:
+ github_document:
     code_folding: show
     theme: flatly
     highlight: breezedark
