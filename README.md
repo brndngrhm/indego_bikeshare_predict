@@ -1,2 +1,15 @@
-# indego_bikeshare_predict
-code and files for Indego bikeshare bike availability prediction model
+# Indego Bikeshare Prediction Model
+
+### About
+
+In this project I am focusing several objectives:
+
+ * Developing a time series model with exogenous regressors using `prophet`
+ * Deploying that model as an API
+ * Writing more robust, modular R code
+ * Writing unit tests
+ 
+ This project is **not** about developing the best time series model to predict daily IndeGo trips. I am likely going to just use the `prophet` defaults.
+ 
+### Repo Contents
+ 
