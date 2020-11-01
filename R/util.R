@@ -63,3 +63,17 @@ util.make_prophet_forecast <- function(new_data){
   return(forecast)
   
 }
+
+util.plot_forecast <- function(data){
+  
+  plot <- data %>%
+    ggplot(., aes(x = as.Date(ds), y = yhat, group = 1)) + 
+    geom_ribbon(aes(ymin = yhat_lower, ymax = yhat_upper), fill = "grey70") + 
+    geom_point() + 
+    geom_line() + 
+    labs(x = "Date", y = "Forecast Rides", title = "Indego Rides Forecast") + 
+    scale_x_date(breaks = "1 day")
+  
+  print(plot)
+         
+}
