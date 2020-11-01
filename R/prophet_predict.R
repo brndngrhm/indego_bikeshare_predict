@@ -8,7 +8,7 @@ library(formattable)
 
 source(here::here("R", "util.R"))
 
-weather_forecast <- util.get_weather_forecast(start_date = Sys.Date(), end_date = Sys.Date() + 5)
+weather_forecast <- util.get_weather_forecast(start_date = "2020-11-05", end_date = "2020-11-06")
 
 rides_forecast <- util.make_prophet_forecast(weather_forecast)
 
@@ -21,5 +21,3 @@ rides_forecast %>%
   select(ds, pred = yhat) %>%
   left_join(., weather_forecast, "ds") %>%
   formattable(.)
-       
-

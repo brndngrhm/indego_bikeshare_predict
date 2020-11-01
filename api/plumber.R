@@ -51,13 +51,12 @@ function(start_date, end_date) {
   
   weather_forecast <- util.get_weather_forecast(start_date, end_date)
   
-  plot <- util.make_prophet_forecast(weather_forecast) %>%
-    ggplot(., aes(x = ds, y = yhat)) + 
-    geom_ribbon(aes(ymin = yhat_lower, ymax = yhat_upper), fill = "grey70") + 
-    geom_point() + 
-    geom_line()
+  rides_forecast <- util.make_prophet_forecast(weather_forecast)
+  
+  plot <- util.plot_forecast(rides_forecast) %>%
+    labs(title = paste("Indego Forecast for", start_date, "to", end_date))
   
   print(plot)
-  
+
 }
 

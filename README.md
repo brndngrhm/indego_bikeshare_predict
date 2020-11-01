@@ -9,7 +9,7 @@ In this project I am focusing several objectives:
  * Writing more robust, modular R code
  * Writing unit tests
  
- This project is **not** about developing the best time series model to predict daily IndeGo trips. I am likely going to just use the `prophet` defaults.
+ This project is **not** about developing the best time series model to predict daily Indego trips. I am likely going to just use the `prophet` defaults.
  
 ### Repo Contents
  
