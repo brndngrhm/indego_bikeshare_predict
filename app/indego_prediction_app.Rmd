@@ -1,0 +1,89 @@
+---
+title: "Daily Indego Predictions"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    theme: yeti
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(prophet)
+library(here)
+library(darksky)
+library(reactable)
+library(shiny)
+library(highcharter)
+
+#dark table theme
+options(reactable.theme = reactableTheme(
+  color = "hsl(233, 9%, 87%)",
+  backgroundColor = "hsl(233, 9%, 19%)",
+  borderColor = "hsl(233, 9%, 22%)",
+  stripedColor = "hsl(233, 12%, 22%)",
+  highlightColor = "hsl(233, 12%, 24%)",
+  inputStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
+  selectStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
+  pageButtonHoverStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
+  pageButtonActiveStyle = list(backgroundColor = "hsl(233, 9%, 28%)")
+))
+```
+
+
+.sidebar {.sidebar}
+--------------------
+```{r}
+shiny::dateRangeInput(inputId = "date_select", label = h4("Select Date Range"), start = Sys.Date() + 1, end = Sys.Date() + 7, format = "yyyy-mm-dd", separator = "to")
+
+shiny::actionButton(inputId = "get_weather_forecast", label = "Generate Forecast")
+```
+
+```{r}
+
+source(here::here("R", "util.R"))
+
+weather_forecast <- eventReactive(input$get_weather_forecast, {
+  util.get_weather_forecast(start_date = min(input$date_select), end_date = max(input$date_select))
+}
+)
+
+```
+
+Row
+-----------
+### 
+```{r}
+renderHighchart({
+  
+  shiny::validate(
+    need(input$get_weather_forecast > 0 , "Select date range then click 'Generate Forecast'")
+  )
+  
+  hchart(util.make_prophet_forecast(weather_forecast()), "line", hcaes(x = as.Date(ds), y = ceiling(yhat))) %>%
+    hc_title(text = paste("Daily Ride Forecast between", min(input$date_select), "and", max(input$date_select)),
+             align = 'left') %>%
+      hc_add_theme(hc_theme_darkunica())
+})
+```
+
+### 
+```{r}
+renderReactable({
+  
+    shiny::validate(
+    need(input$get_weather_forecast > 0 , "Select date range then click 'Generate Forecast'")
+  )
+  
+  util.make_prophet_forecast(weather_forecast()) %>%
+    select(ds, pred = yhat) %>%
+    left_join(., weather_forecast(), "ds") %>%
+    mutate(ds = as.Date(ds),
+           pred = ceiling(pred)) %>%
+    rename(date = ds, forecast = pred) %>%
+    reactable(., pagination = FALSE, highlight = TRUE)
+})
+```
