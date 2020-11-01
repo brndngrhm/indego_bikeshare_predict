@@ -37,7 +37,13 @@ options(reactable.theme = reactableTheme(
 .sidebar {.sidebar}
 --------------------
 ```{r}
-shiny::dateRangeInput(inputId = "date_select", label = h4("Select Date Range"), start = Sys.Date() + 1, end = Sys.Date() + 7, format = "yyyy-mm-dd", separator = "to")
+shiny::dateRangeInput(inputId = "date_select", 
+                      label = h4("Select Date Range"), 
+                      start = Sys.Date() + 1, 
+                      end = Sys.Date() + 8,
+                      max = Sys.Date() + 30, 
+                      format = "yyyy-mm-dd", 
+                      separator = "to")
 
 shiny::actionButton(inputId = "get_weather_forecast", label = "Generate Forecast")
 ```
