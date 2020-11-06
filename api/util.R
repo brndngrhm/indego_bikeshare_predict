@@ -39,12 +39,12 @@ util.get_weather_forecast <- function(start_date, end_date){
                   "dew_point", "humidity", "pressure", "wind_speed", "cloud_cover", 
                   "uv_index", "visibility", "apparent_temperature_max")
   
-  weather_forecast <- seq(as.Date({{start_date}}), as.Date({{end_date}}), "1 day") %>% 
+  weather_forecast <- seq(as.Date(start_date)+1, as.Date(end_date)+1, "1 day") %>% 
     purrr::map(~darksky::get_forecast_for(39.9528, -75.1635, .x)) %>% 
     purrr::map_dfr("daily") %>%
     janitor::clean_names() %>%
     dplyr::ungroup() %>%
-    dplyr::mutate(date = as.Date(time)) %>%
+    dplyr::mutate(date = as.Date(time)+1) %>%
     dplyr::select(all_of(predictors)) %>%
     dplyr::mutate(precip_type = ifelse(is.na(precip_type), "none", precip_type)) %>%
     dplyr::mutate_if(is.character, as.factor) %>%
@@ -52,16 +52,6 @@ util.get_weather_forecast <- function(start_date, end_date){
     na.omit()
   
   return(weather_forecast)
-}
-
-util.make_prophet_forecast <- function(new_data){
-  
-  model <- readRDS(here::here("R", "models", "prophet_model.Rds"))
-  
-  forecast <- predict(model, new_data)
-  
-  return(forecast)
-  
 }
 
 util.plot_forecast <- function(data){

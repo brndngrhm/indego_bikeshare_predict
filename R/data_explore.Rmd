@@ -1,7 +1,7 @@
 ---
 title: "Indego Bikeshare Data Exploration"
-output:
- github_document:
+output: 
+  html_document:
     code_folding: show
     theme: flatly
     highlight: breezedark
@@ -25,7 +25,7 @@ library(plotly) #https://plotly-r.com/
 library(heatmaply)
 library(here)
 
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning= FALSE, ig.height = 8, fig.width = 10)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.height = 8, fig.width = 10)
 ```
 
 ### Initial Look at the Data

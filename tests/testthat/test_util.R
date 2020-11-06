@@ -31,3 +31,4 @@ test_that("prophet data has equivalent rows",{
 test_that("prophet models is class prophet",{
   expect_s3_class(prophet_model_fixture, "prophet")
 })
+

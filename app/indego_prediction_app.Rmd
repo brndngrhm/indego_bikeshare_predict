@@ -18,6 +18,9 @@ library(darksky)
 library(reactable)
 library(shiny)
 library(highcharter)
+library(config)
+
+source(here::here("api", "util.R"))
 
 #dark table theme
 options(reactable.theme = reactableTheme(
@@ -31,6 +34,13 @@ options(reactable.theme = reactableTheme(
   pageButtonHoverStyle = list(backgroundColor = "hsl(233, 9%, 25%)"),
   pageButtonActiveStyle = list(backgroundColor = "hsl(233, 9%, 28%)")
 ))
+
+# base_url <- config::get("base_url")
+# 
+# api_res <- httr::POST(url = paste0(base_url, "/daily_ride_forecast")),
+#                           body = reactive_values$data,
+#                           encode = "json")
+
 ```
 
 
@@ -45,14 +55,12 @@ shiny::dateRangeInput(inputId = "date_select",
                       format = "yyyy-mm-dd", 
                       separator = "to")
 
-shiny::actionButton(inputId = "get_weather_forecast", label = "Generate Forecast")
+shiny::actionButton(inputId = "predict", label = "Generate Forecast")
 ```
 
 ```{r}
 
-source(here::here("R", "util.R"))
-
-weather_forecast <- eventReactive(input$get_weather_forecast, {
+weather_forecast <- eventReactive(input$predict, {
   util.get_weather_forecast(start_date = min(input$date_select), end_date = max(input$date_select))
 }
 )
@@ -66,7 +74,7 @@ Row
 renderHighchart({
   
   shiny::validate(
-    need(input$get_weather_forecast > 0 , "Select date range then click 'Generate Forecast'")
+    need(input$predict > 0 , "Select date range then click 'Generate Forecast'")
   )
   
   hchart(util.make_prophet_forecast(weather_forecast()), "line", hcaes(x = as.Date(ds), y = ceiling(yhat))) %>%
@@ -81,7 +89,7 @@ renderHighchart({
 renderReactable({
   
     shiny::validate(
-    need(input$get_weather_forecast > 0 , "Select date range then click 'Generate Forecast'")
+    need(input$predict > 0 , "Select date range then click 'Generate Forecast'")
   )
   
   util.make_prophet_forecast(weather_forecast()) %>%

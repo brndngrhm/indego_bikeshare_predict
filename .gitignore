@@ -2,9 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
-
 data_prep/
 *.png
 *.html
 *.md
 *.csv
+.httr-oauth
+*.md
+.vscode/settings.json

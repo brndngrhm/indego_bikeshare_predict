@@ -56,7 +56,7 @@ model_full <- fit.prophet(model, prophet_data)
 
 model_full <- readRDS("R/models/prophet_model.Rds")
 
-predict(model_full, weather_forecast%>%
+predict(model_full, weather_forecast %>%
           mutate_if(is.character, as.factor)
 )
 
